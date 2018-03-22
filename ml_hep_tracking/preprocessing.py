@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import List, Callable, Optional
+from typing import Callable, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 
@@ -16,21 +15,24 @@ class FeatureTransform(BaseEstimator, TransformerMixin):
         self.transformation = transformation
         if output_feature is not None:
             self.output_feature = output_feature
-        self.scaler = StandardScaler()
+        self.scaler = StandardScaler
 
-    def _apply_transformaton(self, X: pd.DataFrame) -> pd.DataFrame:
+    def _apply_transformaton(self, X: pd.DataFrame) -> np.ndarray:
         if self.transformation is not None:
-            data = self.transformation(X[self.input_feature].copy())
+            data = self.transformation(X[self.input_feature].values)
         else:
-            data = X[self.input_feature].copy()
-        return data.values.reshape(-1, 1)
+            data = X[self.input_feature].values
+        return data.reshape(-1, 1)
 
     def fit(self, X: pd.DataFrame, y=None) -> 'FeatureTransform':
+        X = X.copy()
+        self.scaler = self.scaler()
         data = self._apply_transformaton(X)
         self.scaler.fit(data)
         return self
 
     def transform(self, X: pd.DataFrame, y=None) -> pd.DataFrame:
+        X = X.copy()
         data = self._apply_transformaton(X)
         X[self.output_feature] = self.scaler.transform(data)
         return X
