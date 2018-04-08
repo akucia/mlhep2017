@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import time
 from pprint import pprint
 
 import keras
@@ -25,8 +26,8 @@ train_df.dropna(inplace=True)
 
 rus = RandomUnderSampler(return_indices=True)
 
-X = train_df.drop(['signal'], axis=1)
-y = train_df['signal']
+X = train_df.drop(['signal', 'index', 'event_id'], axis=1)
+y = train_df[['signal']]
 
 X_resampled, y_resampled, idx_resampled = rus.fit_sample(X, y)
 
@@ -35,9 +36,17 @@ X_resampled = pd.DataFrame(X_resampled, columns=X.columns)
 
 
 classifier = DeepNeuralNet((X.shape[1],), (1,), layers=3, neurons=32)
-callbacks = keras.callbacks.ReduceLROnPlateau(
-    monitor='val_loss', factor=0.5, patience=10, verbose=1
-)
+
+callbacks = [
+    keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss', factor=0.5, patience=10, verbose=1
+    ),
+    keras.callbacks.TensorBoard(
+        log_dir=f'./logs/Simple_DNN/{time.ctime()}',
+        histogram_freq=0,
+        write_graph=True,
+    )
+]
 
 pipeline = Pipeline(data_pipeline() + [('classifier', classifier)])
 
@@ -53,9 +62,9 @@ scores_dnn = cross_validate(
     verbose=3,
     n_jobs=1,
     fit_params={
-        'classifier__epochs': 100,
+        'classifier__epochs': 50,
         'classifier__batch_size': 1000,
-        'classifier__callbacks': [callbacks],
+        'classifier__callbacks': callbacks,
         'classifier__validation_split': 0.25
     },
 )
